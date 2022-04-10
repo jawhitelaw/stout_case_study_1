@@ -18,6 +18,7 @@ output:
 library(tidyverse)
 library(ggthemes)
 library(ggmap)
+library(tidymodels)
 theme_set(theme_minimal())
 ```
 
@@ -98,7 +99,7 @@ loans %>%
 
 Map of the number of loans by state. California appears to have the most loans, followed by Texas, New York, and Florida.
 
-
+## Modeling Interest Rate
 
 
 
