@@ -4,15 +4,20 @@ author: "Jason Whitelaw"
 date: "4/10/2022"
 output: 
   html_document:
-    keep_md: TRUE
+    keep_md: TRUE    
+    toc: TRUE
+    toc_float: TRUE
     df_print: paged
     code_download: TRUE
 ---
+
+## Setup
 
 ```{r}
 # load packages
 library(tidyverse)
 library(ggthemes)
+library(ggmap)
 theme_set(theme_minimal())
 ```
 
@@ -21,12 +26,77 @@ theme_set(theme_minimal())
 loans <- read_csv("loans_full_schema.csv")
 ```
 
+## Description and Issues
+
 This data set contains loans made through the platform Lending Club. Each row represents a loan that was successfully made from one individual to another. The columns contain various information regarding the loan applicant and the loan itself. The only minor issue I see with the data set is the abundance of NA values due to the specificity of many of the columns.
 
-```{r}
+# Visualizations and Observations
 
+```{r}
+loans %>%
+  group_by(loan_purpose) %>%
+  mutate(loan_purpose_count = n()) %>%
+  select(loan_purpose, loan_purpose_count) %>%
+  unique() %>%
+  ggplot(aes(x = fct_reorder(loan_purpose, loan_purpose_count), y = loan_purpose_count, fill = loan_purpose, label = loan_purpose_count)) +
+  geom_col() +
+  geom_text(nudge_y = 150) +
+  labs(x = "Loan Purpose", y = "", title = "Accepted Loans by Loan Purpose") +
+  theme(legend.position = "none", axis.text.x = element_text(size = 4.5))
 ```
 
+Bar chart of accepted loans by loan purpose. There are the most loans for debt consolidation followed by credit card and the least for renewable energy.
+
+```{r}
+loans %>%
+  filter(annual_income > 10) %>%
+  ggplot(aes(x = annual_income, y = interest_rate)) +
+  geom_point(color = "darkblue") +
+  scale_x_log10() +
+  labs(x = "Annual Income (log adjusted)", y = "Interest Rate", title = "Interest Rate vs. Annual Income")
+```
+
+Plot of interest rate vs. annual income. There appears to be no obvious correlation between income and interest rate, except that the distribution of incomes seems to be tighter for higher interest rate loans.
+
+```{r}
+loans %>%
+  ggplot(aes(x = interest_rate, color = homeownership)) +
+  geom_density() +
+  labs(x = "Interest Rate", y = "", title = "Distribution of Loan Interest Rates based on Home Ownership")
+```
+
+Density plot of loan interest rates based on home ownership. Generally, interest rates are similar for all types of home ownership, however there are slightly more low interest rate loans for applicants who mortgage or own their house and slightly more high interest loans for applicants who rent their house.
+
+```{r}
+loans %>%
+  ggplot(aes(x = grade, y = interest_rate, fill = grade)) +
+  geom_boxplot() +
+  labs(x = "Loan Grade", y = "Interest Rate", title = "Loan Interest Rates by Grade") +
+  theme(legend.position = "none")
+```
+
+Box plot of loan interest rates by grade. The lower the interest rate on the loan, the better the grade the loan receives.
+
+```{r}
+states_map <- map_data("state")
+
+loans %>%
+  mutate(state_name = state.name[match(state, state.abb)]) %>%
+  mutate(state_name = str_to_lower(state_name)) %>%
+  filter(is.na(state_name)==FALSE) %>%
+  group_by(state_name) %>%
+  mutate(state_count = n()) %>%
+  select(state_name, state_count) %>%
+  unique() %>%
+  ggplot() +
+  geom_map(map = states_map, aes(map_id = state_name, fill = state_count)) +
+  expand_limits(x = states_map$long, y = states_map$lat) + 
+  theme_map() +
+  labs(title = "Number of Loans by State") +
+  theme(legend.title = element_blank())
+```
+
+Map of the number of loans by state. California appears to have the most loans, followed by Texas, New York, and Florida.
 
 
 
