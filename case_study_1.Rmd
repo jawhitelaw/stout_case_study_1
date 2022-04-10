@@ -8,3 +8,27 @@ output:
     df_print: paged
     code_download: TRUE
 ---
+
+```{r}
+# load packages
+library(tidyverse)
+library(ggthemes)
+theme_set(theme_minimal())
+```
+
+```{r}
+# read in data
+loans <- read_csv("loans_full_schema.csv")
+```
+
+This data set contains loans made through the platform Lending Club. Each row represents a loan that was successfully made from one individual to another. The columns contain various information regarding the loan applicant and the loan itself. The only minor issue I see with the data set is the abundance of NA values due to the specificity of many of the columns.
+
+```{r}
+
+```
+
+
+
+
+
+
