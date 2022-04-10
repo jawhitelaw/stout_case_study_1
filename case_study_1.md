@@ -13,12 +13,10 @@ output:
 
 ## Setup
 
-```{r setup, include=FALSE}
-# r setup
-knitr::opts_chunk$set(echo = TRUE, error=TRUE, message=FALSE, warning=FALSE)
-```
 
-```{r}
+
+
+```r
 # load packages
 library(tidyverse)
 library(ggthemes)
@@ -29,7 +27,8 @@ theme_set(theme_minimal())
 tidymodels_prefer()
 ```
 
-```{r}
+
+```r
 # read in data
 loans <- read_csv("loans_full_schema.csv")
 ```
@@ -40,7 +39,8 @@ This data set contains loans made through the platform Lending Club. Each row re
 
 ## Visualizations and Observations
 
-```{r}
+
+```r
 loans %>%
   group_by(loan_purpose) %>%
   mutate(loan_purpose_count = n()) %>%
@@ -53,9 +53,12 @@ loans %>%
   theme(legend.position = "none", axis.text.x = element_text(size = 4.5))
 ```
 
+![](case_study_1_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
+
 Bar chart of accepted loans by loan purpose. There are the most loans for debt consolidation followed by credit card and the least for renewable energy.
 
-```{r}
+
+```r
 loans %>%
   filter(annual_income > 10) %>%
   ggplot(aes(x = annual_income, y = interest_rate)) +
@@ -64,18 +67,24 @@ loans %>%
   labs(x = "Annual Income (log adjusted)", y = "Interest Rate", title = "Interest Rate vs. Annual Income")
 ```
 
+![](case_study_1_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
+
 Plot of interest rate vs. annual income. There appears to be no obvious correlation between income and interest rate, except that the distribution of incomes seems to be tighter for higher interest rate loans.
 
-```{r}
+
+```r
 loans %>%
   ggplot(aes(x = interest_rate, color = homeownership)) +
   geom_density() +
   labs(x = "Interest Rate", y = "", title = "Distribution of Loan Interest Rates based on Home Ownership")
 ```
 
+![](case_study_1_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
+
 Density plot of loan interest rates based on home ownership. Generally, interest rates are similar for all types of home ownership, however there are slightly more low interest rate loans for applicants who mortgage or own their house and slightly more high interest loans for applicants who rent their house.
 
-```{r}
+
+```r
 loans %>%
   ggplot(aes(x = grade, y = interest_rate, fill = grade)) +
   geom_boxplot() +
@@ -83,9 +92,12 @@ loans %>%
   theme(legend.position = "none")
 ```
 
+![](case_study_1_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
+
 Box plot of loan interest rates by grade. The lower the interest rate on the loan, the better the grade the loan receives.
 
-```{r}
+
+```r
 states_map <- map_data("state")
 
 loans %>%
@@ -104,13 +116,16 @@ loans %>%
   theme(legend.title = element_blank())
 ```
 
+![](case_study_1_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
+
 Map of the number of loans by state. California appears to have the most loans, followed by Texas, New York, and Florida.
 
 ## Modeling Interest Rate
 
 ### Linear Regression with Cross-Validation
 
-```{r}
+
+```r
 set.seed(1)
 
 # linear regression model spec
@@ -123,7 +138,8 @@ lm_spec <-
 loans_cv <- vfold_cv(loans, v = 10)
 ```
 
-```{r}
+
+```r
 # workflow
 mod1_wf <- workflow() %>%
   add_formula(interest_rate ~ annual_income + debt_to_income + delinq_2y) %>%
@@ -133,13 +149,21 @@ mod1_wf <- workflow() %>%
 mod1_cv <- fit_resamples(mod1_wf, resamples = loans_cv, metrics = metric_set(rmse, rsq, mae))
 ```
 
-```{r}
+
+```r
 mod1_cv %>% collect_metrics()
 ```
 
+<div data-pagedtable="false">
+  <script data-pagedtable-source type="application/json">
+{"columns":[{"label":[".metric"],"name":[1],"type":["chr"],"align":["left"]},{"label":[".estimator"],"name":[2],"type":["chr"],"align":["left"]},{"label":["mean"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["n"],"name":[4],"type":["int"],"align":["right"]},{"label":["std_err"],"name":[5],"type":["dbl"],"align":["right"]},{"label":[".config"],"name":[6],"type":["chr"],"align":["left"]}],"data":[{"1":"mae","2":"standard","3":"3.86986374","4":"10","5":"0.034542331","6":"Preprocessor1_Model1"},{"1":"rmse","2":"standard","3":"4.91116207","4":"10","5":"0.043577453","6":"Preprocessor1_Model1"},{"1":"rsq","2":"standard","3":"0.03792391","4":"10","5":"0.004790489","6":"Preprocessor1_Model1"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+
 ### GAMs
 
-```{r}
+
+```r
 set.seed(1)
 
 # gam model spec
@@ -151,16 +175,39 @@ gam_spec <- gen_additive_mod() %>%
 gam_mod <- fit(gam_spec, interest_rate ~ s(annual_income) + s(debt_to_income) + s(delinq_2y), data = loans)
 ```
 
-```{r}
+
+```r
 par(mfrow=c(2,2))
 gam_mod %>% pluck('fit') %>% 
   mgcv::gam.check() 
 ```
 
-```{r}
+![](case_study_1_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
+
+```
+## 
+## Method: GCV   Optimizer: magic
+## Smoothing parameter selection converged after 4 iterations.
+## The RMS GCV score gradient at convergence was 3.993287e-05 .
+## The Hessian was positive definite.
+## Model rank =  28 / 28 
+## 
+## Basis dimension (k) checking results. Low p-value (k-index<1) may
+## indicate that k is too low, especially if edf is close to k'.
+## 
+##                     k'  edf k-index p-value
+## s(annual_income)  9.00 5.83    0.99    0.23
+## s(debt_to_income) 9.00 7.18    0.99    0.18
+## s(delinq_2y)      9.00 5.08    1.00    0.51
+```
+
+
+```r
 gam_mod %>% pluck('fit') %>% 
   plot(all.terms = TRUE, pages = 1)
 ```
+
+![](case_study_1_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
 
 ## Analysis
 
